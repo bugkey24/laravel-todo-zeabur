@@ -17,7 +17,17 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd
+RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd opcache
+
+# Configure opcache for raw performance
+RUN echo "opcache.enable=1\n\
+opcache.enable_cli=1\n\
+opcache.fast_shutdown=1\n\
+opcache.interned_strings_buffer=8\n\
+opcache.max_accelerated_files=10000\n\
+opcache.memory_consumption=128\n\
+opcache.save_comments=1\n\
+opcache.revalidate_freq=2" > /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
