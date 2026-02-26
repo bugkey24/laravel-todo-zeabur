@@ -25,7 +25,7 @@ The easiest way to run this application locally is by using Docker and Docker Co
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repository-url>
+   git clone https://github.com/bugkey24/laravel-todo-zeabur.git
    cd to-do-list-app
    ```
 
