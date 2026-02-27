@@ -1,25 +1,26 @@
-FROM php:8.3-fpm
+FROM php:8.3-apache
 
-# Install system dependencies
+# Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
+    libpq-dev \
     libpng-dev \
-    libonig-dev \
-    libxml2-dev \
+    libzip-dev \
+    libicu-dev \
     zip \
     unzip \
-    libpq-dev \
-    nodejs \
-    npm
+    git \
+    curl \
+    && docker-php-ext-install pdo_pgsql gd zip intl opcache
 
-# Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# Enable Apache rewrite module
+RUN a2enmod rewrite
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo_pgsql mbstring exif pcntl bcmath gd opcache
+# Change document root to Laravel's public folder
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Configure opcache for raw performance
+# Configure OpCache for performance
 RUN echo "opcache.enable=1\n\
 opcache.enable_cli=1\n\
 opcache.fast_shutdown=1\n\
@@ -35,15 +36,14 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Setup Permissions
-RUN chown -R www-data:www-data /var/www/html
+# Copy the application source code
+COPY . /var/www/html
 
-USER www-data
+# Install dependencies
+RUN composer install --no-interaction --optimize-autoloader --no-dev
 
-# The actual source code copying will happen via volumes in dev, 
-# or can be added here for production images. For Zeabur, Zeabur wraps this properly or you can build it.
-# To make this a robust production image as well:
-COPY --chown=www-data:www-data . /var/www/html
+# Ensure appropriate permissions for Laravel
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Note: composer install is often run here for prod:
-# RUN composer install --no-interaction --optimize-autoloader --no-dev
+# Standard port for Zeabur mapping
+EXPOSE 80
